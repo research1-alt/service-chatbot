@@ -75,7 +75,7 @@ ${chatHistory}
 Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] CSV data first. If found, present the pin position as a clear table. If not found there, search the [SUPPLEMENTAL MANUALS].`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash', 
+            model: 'gemini-3.5-flash', 
             contents: [{ parts: [{ text: fullPrompt }] }],
             config: {
                 systemInstruction,
