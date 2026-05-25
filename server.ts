@@ -29,6 +29,7 @@ async function startServer() {
     const targetLanguageName = languageMap[language] || 'English';
 
     try {
+        console.log("Attempting to initialize AI client...");
         const ai = new GoogleGenAI({ 
             apiKey: process.env.GEMINI_API_KEY, 
             httpOptions: {
@@ -37,6 +38,8 @@ async function startServer() {
                 }
             } 
         });
+        
+        console.log("AI client initialized successfully.");
         
         const systemInstruction = `YOU ARE THE "OSM TECHNICAL MENTOR"—A HIGH-PRECISION REASONING ENGINE FOR OMEGA SEIKI MOBILITY.
 
@@ -74,8 +77,9 @@ ${chatHistory}
 ### FINAL DIRECTIVE:
 Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] CSV data first. If found, present the pin position as a clear table. If not found there, search the [SUPPLEMENTAL MANUALS].`;
 
+        console.log("Calling ai.models.generateContent...");
         const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash', 
+            model: 'gemini-1.5-flash', 
             contents: [{ parts: [{ text: fullPrompt }] }],
             config: {
                 systemInstruction,
@@ -95,6 +99,8 @@ Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] C
                 }
             },
         });
+        
+        console.log("Gemini API call successful.");
 
         const responseText = response.text || "";
         console.log("Gemini Raw Response:", responseText); // Debugging
@@ -109,8 +115,8 @@ Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] C
         const data = JSON.parse(responseText.substring(startIdx, endIdx));
         res.json(data);
     } catch (error) {
-        console.error("Chatbot Proxy Error:", error);
-        res.status(500).json({ error: "Proxy Error" });
+        console.error("Chatbot Proxy Error (DETAILED):", error);
+        res.status(500).json({ error: "Proxy Error", details: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -118,23 +124,29 @@ Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] C
   app.get("/api/sync-sheet", async (req, res) => {
     const MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9JdhdhfXumJA_tRoKVu6azf2hBAtQBec_QkRB4R_lNYv6jYwchV3vdzRWQTzAYqOLh24KwsKPQ2Ti/pub?output=csv";
     
+    console.log("Fetching Master Sheet...");
     try {
         const response = await fetch(MASTER_SHEET_URL, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (compatible; OSM-Service-Bot/1.0)'
             }
         });
+        
+        console.log("Sheet fetch status:", response.status);
+        
         if (!response.ok) {
             console.error(`Sheet Sync Proxy Error: Failed to fetch (Status: ${response.status})`);
             throw new Error(`Cloud access denied (Status: ${response.status})`);
         }
         const csvData = await response.text();
+        console.log("Sheet data length:", csvData.length);
         res.type('text/csv').send(csvData);
     } catch (error) {
-        console.error("Sheet Sync Proxy Error:", error);
+        console.error("Sheet Sync Proxy Error (DETAILED):", error);
         res.status(500).json({ error: error instanceof Error ? error.message : "Cloud access denied" });
     }
   });
+
 
 
   // Vite middleware
