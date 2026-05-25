@@ -119,7 +119,11 @@ Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] C
     const MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9JdhdhfXumJA_tRoKVu6azf2hBAtQBec_QkRB4R_lNYv6jYwchV3vdzRWQTzAYqOLh24KwsKPQ2Ti/pub?output=csv";
     
     try {
-        const response = await fetch(MASTER_SHEET_URL);
+        const response = await fetch(MASTER_SHEET_URL, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; OSM-Service-Bot/1.0)'
+            }
+        });
         if (!response.ok) {
             console.error(`Sheet Sync Proxy Error: Failed to fetch (Status: ${response.status})`);
             throw new Error(`Cloud access denied (Status: ${response.status})`);
