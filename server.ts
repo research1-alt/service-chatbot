@@ -75,7 +75,7 @@ ${chatHistory}
 Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] CSV data first. If found, present the pin position as a clear table. If not found there, search the [SUPPLEMENTAL MANUALS].`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash', 
+            model: 'gemini-1.5-flash', 
             contents: [{ parts: [{ text: fullPrompt }] }],
             config: {
                 systemInstruction,
@@ -102,18 +102,15 @@ Identify the vehicle powertrain system mentioned. Search the [MASTER DATABASE] C
         const startIdx = responseText.indexOf('{');
         const endIdx = responseText.lastIndexOf('}') + 1;
         
-        if (startIdx === -1 || (endIdx <= startIdx && !responseText.includes('{'))) {
-            console.error("Gemini raw output is not valid JSON:", responseText);
-            throw new Error(`Invalid JSON response`);
+        if (startIdx === -1 || endIdx <= startIdx) {
+            throw new Error(`Invalid JSON response: ${responseText}`);
         }
         
-        // Handle cases where startIdx is found but endIdx doesn't cover the full structure
-        const jsonString = responseText.substring(startIdx, endIdx);
-        const data = JSON.parse(jsonString);
+        const data = JSON.parse(responseText.substring(startIdx, endIdx));
         res.json(data);
     } catch (error) {
         console.error("Chatbot Proxy Error:", error);
-        res.status(500).json({ error: error instanceof Error ? error.message : "Proxy Error" });
+        res.status(500).json({ error: "Proxy Error" });
     }
   });
 
