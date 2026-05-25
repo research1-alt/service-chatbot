@@ -9,28 +9,34 @@ import InstallPrompt from './components/InstallPrompt';
 import { ChatMessage } from './types';
 import { getChatbotResponse } from './services/geminiService';
 import { addFile, getAllFiles, StoredFile, deleteFile } from './utils/db';
+import { matelEvKnowledgeBase } from './defaultLibrary';
 import { logUserQuery } from './services/otpService';
 import useAuth from './hooks/useAuth';
 
+/**
+ * ADMINISTRATIVE CONFIGURATION
+ * Update the MASTER_SHEET_URL below with your published Google Sheet CSV link.
+ * Format: File -> Share -> Publish to Web -> Link -> Comma-separated values (.csv)
+ */
 const ADMIN_EMAIL = 'research1@omegaseikimobility.com';
-const MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9JdhdhfXumJA_tRoKVu6azf2hBAtQBec_QkRB4R_lNYv6jYwchV3vdzRWQTzAYqOLh24KwsKPQ2Ti/pub?gid=117585244&single=true&output=csv";
+const MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9JdhdhfXumJA_tRoKVu6azf2hBAtQBec_QkRB4R_lNYv6jYwchV3vdzRWQTzAYqOLh24KwsKPQ2Ti/pub?output=csv";
 const FEEDBACK_URL = 'https://forms.gle/YcrerYAazwxi5zXL7';
 const LOGO_URL = "https://ik.imagekit.io/m8gcj8knd/white%20(with%20background).png";
 
 const INDIAN_LANGUAGES = [
     { code: 'en-US', name: 'English', native: 'English', flag: '🇬🇧' },
     { code: 'hi-IN', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
-    { code: 'mr-IN', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+    { code: 'mr-IN', name: 'Marathi', native: 'مراठी', flag: '🇮🇳' },
     { code: 'ta-IN', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
     { code: 'te-IN', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
     { code: 'bn-IN', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
-    { code: 'gu-IN', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
-    { code: 'kn-IN', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
-    { code: 'ml-IN', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
-    { code: 'pa-IN', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳' },
-    { code: 'ur-IN', name: 'Urdu', native: 'اردو', flag: '🇮🇳' },
-    { code: 'as-IN', name: 'Assamese', native: 'অসমীয়া', flag: '🇮🇳' },
-    { code: 'or-IN', name: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🇮🇳' },
+    { code: 'gu-IN', name: 'Gujarati', native: 'Gujarati', flag: '🇮🇳' },
+    { code: 'kn-IN', name: 'Kannada', native: 'Kannada', flag: '🇮🇳' },
+    { code: 'ml-IN', name: 'Malayalam', native: 'Malayalam', flag: '🇮🇳' },
+    { code: 'pa-IN', name: 'Punjabi', native: 'Punjabi', flag: '🇮🇳' },
+    { code: 'ur-IN', name: 'Urdu', native: 'Urdu', flag: '🇮🇳' },
+    { code: 'as-IN', name: 'Assamese', native: 'Assamese', flag: '🇮🇳' },
+    { code: 'or-IN', name: 'Odia', native: 'Odia', flag: '🇮🇳' },
 ];
 
 const App: React.FC = () => {
@@ -54,6 +60,7 @@ const App: React.FC = () => {
   const [isLangSelectorOpen, setIsLangSelectorOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
+  // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
@@ -61,10 +68,10 @@ const App: React.FC = () => {
 
   const getInitialMessage = useCallback((): ChatMessage => ({
     id: `welcome-${chatSessionKey}-${Date.now()}`,
-    text: `Welcome to the OSM Service Portal. I am your specialized AI Assistant. Ask me anything about vehicle troubleshooting, relay diagrams, or fault codes across all powertrain systems.`,
+    text: `Welcome to the OSM Service Portal. I am your specialized AI Assistant. Ask me anything about vehicle troubleshooting, relay diagrams, or fault codes.`,
     sender: 'bot',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    suggestions: ["Matel Pin Position", "Virya Gen 2 Faults", "Relay Diagram"]
+    suggestions: ["Relay Diagram", "Fuse Box Layout", "MCU Power Flow"]
   }), [chatSessionKey]);
 
   useEffect(() => {
@@ -73,8 +80,12 @@ const App: React.FC = () => {
       setDeferredPrompt(e);
       setShowInstallPrompt(true);
     };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -111,7 +122,8 @@ const App: React.FC = () => {
   const fetchMasterSheet = useCallback(async () => {
     setSyncStatus('syncing');
     try {
-      const response = await fetch(MASTER_SHEET_URL);
+      // Fetching the Master Database from the backend proxy
+      const response = await fetch('/api/sync-sheet');
       if (!response.ok) throw new Error("Cloud access denied");
       const csvData = await response.text();
       setMasterSheetContent(csvData);
@@ -126,6 +138,12 @@ const App: React.FC = () => {
     setIsKbLoading(true);
     try {
       let storedFiles = await getAllFiles();
+      if (storedFiles.length === 0) {
+        for (const file of matelEvKnowledgeBase) {
+          await addFile(file);
+        }
+        storedFiles = await getAllFiles();
+      }
       setKbFiles(storedFiles);
       const combined = storedFiles
         .map(f => `FILE: ${f.name}\n---\n${f.content}\n---`)
@@ -170,7 +188,8 @@ const App: React.FC = () => {
         .map(m => `${m.sender === 'bot' ? 'Assistant' : 'Technician'}: ${m.text}`)
         .join('\n');
 
-      const fullContext = `[OSM MASTER DATABASE]\n${masterSheetContent}\n\n[ADMIN UPLOADED MANUALS]\n${kbContent}`;
+      const fullContext = `[OSM MASTER DATABASE]\n${masterSheetContent}\n\n[SUPPLEMENTAL MANUALS]\n${kbContent}`;
+      
       const response = await getChatbotResponse(text, fullContext, history, language);
       
       const botMsg: ChatMessage = {
@@ -184,6 +203,7 @@ const App: React.FC = () => {
 
       setMessages(prev => [...prev, botMsg]);
 
+      // UPDATED: LOG USER QUERY TO CLOUD WITH MISSING DATA STATUS
       if (user?.email) {
           logUserQuery(user.email, user.name || 'Intern', text, user.sessionId, response.isUnclear, user.mobile).catch(e => {
               console.warn("Cloud activity logging deferred.");
@@ -212,12 +232,6 @@ const App: React.FC = () => {
         await deleteFile(name);
         await loadKnowledgeBase();
     }
-  };
-
-  const handleLanguageSelect = (code: string) => {
-    setLanguage(code);
-    setIsLangSelectorOpen(false);
-    setIsSidebarOpen(false);
   };
 
   if (view === 'intro') return <IntroPage onStart={() => setView('auth')} logoUrl={LOGO_URL} />;
@@ -321,10 +335,9 @@ const App: React.FC = () => {
             <div className="flex-1 overflow-y-auto no-scrollbar pb-safe">
                 <div className="grid grid-cols-2 gap-3 pb-8">
                     {INDIAN_LANGUAGES.map((lang) => (
-                        <button key={lang.code} onClick={() => handleLanguageSelect(lang.code)} className={`flex flex-col items-center justify-center p-5 rounded-3xl transition-all border aspect-square ${language === lang.code ? 'bg-green-600 border-green-500 text-white shadow-xl scale-[1.05] z-10' : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-sky-100'}`}>
+                        <button key={lang.code} onClick={() => { setLanguage(lang.code); setIsLangSelectorOpen(false); }} className={`flex flex-col items-center justify-center p-5 rounded-3xl transition-all border aspect-square ${language === lang.code ? 'bg-green-600 border-green-500 text-white shadow-xl scale-[1.05] z-10' : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-sky-100'}`}>
                             <span className="text-3xl mb-3">{lang.flag}</span>
                             <span className="text-[10px] font-black uppercase tracking-widest text-center">{lang.name}</span>
-                            <span className="text-[10px] font-bold opacity-60 mt-1">{lang.native}</span>
                         </button>
                     ))}
                 </div>
@@ -343,9 +356,7 @@ const App: React.FC = () => {
               <img src={LOGO_URL} alt="OSM Logo" className="h-10 w-auto object-contain object-left pr-4 select-none pointer-events-none" style={{ mixBlendMode: 'multiply' }} />
               <div className="flex items-center gap-2 mt-1">
                 <div className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'success' ? 'bg-green-500' : syncStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`}></div>
-                <p className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em]">
-                  {syncStatus === 'syncing' ? 'Syncing...' : 'Service Intern'}
-                </p>
+                <p className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em]">{syncStatus === 'syncing' ? 'Syncing Knowledge...' : showAdminPanel ? 'Admin Mode' : 'Service Intelligence'}</p>
               </div>
             </div>
           </div>

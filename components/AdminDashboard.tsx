@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { User } from '../hooks/useAuth';
 import { StoredFile } from '../utils/db';
 
@@ -20,100 +20,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [previewFile, setPreviewFile] = useState<{name: string, content: string} | null>(null);
   
+  // Link to the centralized activity log spreadsheet provided by user
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1VAxeaMJz_epaw1o0Q-WCnB9-on3-i5ySbmALevZigW8/edit";
-
-  const dataHealth = useMemo(() => {
-    if (!cloudData) return { status: 'idle', details: 'No cloud data synced yet.' };
-    
-    const lines = cloudData.split('\n');
-    if (lines.length < 1) return { status: 'error', details: 'Sheet appears empty.' };
-    
-    const headers = lines[0].toLowerCase();
-    const required = [
-        'topic / component',
-        'category',
-        'technical specs',
-        'procedure / steps / pin-out',
-        'diagram link'
-    ];
-    
-    const missing = required.filter(h => !headers.includes(h));
-    
-    if (missing.length > 0) {
-        return { 
-            status: 'warning', 
-            details: `Missing headers: ${missing.join(', ')}` 
-        };
-    }
-    
-    const hasTags = cloudData.includes('[STEP') || cloudData.includes('[PIN');
-    if (!hasTags) {
-        return {
-            status: 'warning',
-            details: 'Columns found, but no [STEP] or [PIN] tags detected in rows.'
-        };
-    }
-
-    return { status: 'healthy', details: 'All headers and tags detected successfully.' };
-  }, [cloudData]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 space-y-10 pb-48">
       <div className="max-w-5xl mx-auto">
         
-        {/* Monitoring Controls & Health Check */}
-        <div className="flex flex-col gap-6 mb-10">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                <div>
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight">OSM Administrative Terminal</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Monitoring Live Technical Queries & Sessions</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <button 
-                        onClick={() => setPreviewFile({ name: 'Active Session Database Preview', content: cloudData || 'Retrieving latest activity logs...' })}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-sky-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md"
-                    >
-                        Activity Snapshot
-                    </button>
-                    <a 
-                        href={SPREADSHEET_URL} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-md"
-                    >
-                        Open Live Logs
-                    </a>
-                </div>
+        {/* Monitoring Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm mb-10">
+            <div>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">OSM Administrative Terminal</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Monitoring Live Technical Queries & Sessions</p>
             </div>
-
-            {/* Live Data Health Scanner */}
-            <div className={`p-5 rounded-3xl border-2 flex items-center justify-between transition-all ${
-                dataHealth.status === 'healthy' ? 'bg-green-50 border-green-200' : 
-                dataHealth.status === 'warning' ? 'bg-amber-50 border-amber-200' : 
-                'bg-slate-100 border-slate-200'
-            }`}>
-                <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${
-                        dataHealth.status === 'healthy' ? 'bg-green-500 text-white' : 
-                        dataHealth.status === 'warning' ? 'bg-amber-500 text-white' : 
-                        'bg-slate-300 text-slate-600'
-                    }`}>
-                        {dataHealth.status === 'healthy' ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        )}
-                    </div>
-                    <div>
-                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Master Sheet Validator</h4>
-                        <p className={`text-[10px] font-bold ${dataHealth.status === 'healthy' ? 'text-green-600' : 'text-slate-500'}`}>{dataHealth.details}</p>
-                    </div>
-                </div>
-                {dataHealth.status === 'healthy' && (
-                    <div className="hidden xs:block px-4 py-1.5 bg-green-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse">
-                        Ready for Field Use
-                    </div>
-                )}
+            <div className="flex flex-wrap gap-2">
+                <button 
+                    onClick={() => setPreviewFile({ name: 'Active Session Database Preview', content: cloudData || 'Retrieving latest activity logs...' })}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-sky-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md"
+                >
+                    Activity Snapshot
+                </button>
+                <a 
+                    href={SPREADSHEET_URL} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-md"
+                >
+                    Open Live Logs
+                </a>
             </div>
         </div>
 

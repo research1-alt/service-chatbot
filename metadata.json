@@ -1,7 +1,10 @@
 {
-  "name": "Final OSM Inter_01",
+  "name": "Final OSM Service Intern",
   "description": "An intelligent chatbot that reads troubleshooting data from a provided sheet and offers step-by-step solutions for OSM service interns in the field. Admins can load a knowledge base, and interns can query it using natural language.",
   "requestFramePermissions": [
     "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }
